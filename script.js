@@ -1,58 +1,44 @@
-// Get canvas and WebGL context
 const canvas = document.getElementById('glCanvas');
 const gl = canvas.getContext('webgl');
 
-// Set canvas dimensions
-canvas.width = window.innerWidth - 40;
-canvas.height = window.innerHeight - 120;
+canvas.width = 800;
+canvas.height = 400;
 
 if (!gl) {
-    alert('WebGL not supported');
+    alert("WebGL not supported");
 }
 
-// Vertex shader
+// Vertex and Fragment Shaders
 const vertexShaderSrc = `
     attribute vec2 aPosition;
-    uniform float uLineWidth;
     void main() {
-        gl_PointSize = uLineWidth;
         gl_Position = vec4(aPosition, 0.0, 1.0);
     }
 `;
 
-// Fragment shader
 const fragmentShaderSrc = `
     precision mediump float;
     void main() {
-        gl_FragColor = vec4(0.0, 0.5, 0.8, 1.0);
+        gl_FragColor = vec4(0, 0, 0, 1);
     }
 `;
 
-// Compile shader function
-function compileShader(src, type) {
+function compileShader(source, type) {
     const shader = gl.createShader(type);
-    gl.shaderSource(shader, src);
+    gl.shaderSource(shader, source);
     gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-        console.error(gl.getShaderInfoLog(shader));
-        gl.deleteShader(shader);
-        return null;
-    }
     return shader;
 }
 
-// Create shaders
 const vertexShader = compileShader(vertexShaderSrc, gl.VERTEX_SHADER);
 const fragmentShader = compileShader(fragmentShaderSrc, gl.FRAGMENT_SHADER);
 
-// Create program
 const program = gl.createProgram();
 gl.attachShader(program, vertexShader);
 gl.attachShader(program, fragmentShader);
 gl.linkProgram(program);
 gl.useProgram(program);
 
-// Set up buffer and attributes
 const positionBuffer = gl.createBuffer();
 gl.bindBuffer(gl.ARRAY_BUFFER, positionBuffer);
 
@@ -60,45 +46,71 @@ const aPosition = gl.getAttribLocation(program, 'aPosition');
 gl.enableVertexAttribArray(aPosition);
 gl.vertexAttribPointer(aPosition, 2, gl.FLOAT, false, 0, 0);
 
-const uLineWidth = gl.getUniformLocation(program, 'uLineWidth');
-
-// Variables to hold line data
 let points = [];
 let lineWidth = 2;
 
-// Function to draw the line
-function drawLine() {
-    gl.clearColor(1.0, 1.0, 1.0, 1.0);
+function pixelToNDC(x, y) {
+    return [
+        (x / canvas.width) * 2 - 1,
+        (canvas.height - y) / canvas.height * 2 - 1
+    ];
+}
+
+function drawThickLines() {
+    const vertices = [];
+    for (let i = 0; i < points.length - 1; i++) {
+        const [x1, y1] = points[i];
+        const [x2, y2] = points[i + 1];
+
+        const dx = y2 - y1;
+        const dy = x1 - x2;
+        const length = Math.sqrt(dx * dx + dy * dy);
+
+        const offsetX = (dx / length) * (lineWidth / canvas.width);
+        const offsetY = (dy / length) * (lineWidth / canvas.height);
+
+        vertices.push(
+            x1 - offsetX, y1 - offsetY,
+            x1 + offsetX, y1 + offsetY,
+            x2 - offsetX, y2 - offsetY,
+            x2 + offsetX, y2 + offsetY
+        );
+    }
+
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(vertices), gl.STATIC_DRAW);
     gl.clear(gl.COLOR_BUFFER_BIT);
-
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(points), gl.STATIC_DRAW);
-    gl.uniform1f(uLineWidth, lineWidth);
-
-    gl.drawArrays(gl.LINE_STRIP, 0, points.length / 2);
+    gl.drawArrays(gl.TRIANGLE_STRIP, 0, vertices.length / 2);
 }
 
-// Handle adding a random point
-function addRandomPoint() {
-    const x = (Math.random() * 2) - 1;
-    const y = (Math.random() * 2) - 1;
-    points.push(x, y);
-    drawLine();
+function addUserPoint() {
+    const xInput = document.getElementById('xCoord').value;
+    const yInput = document.getElementById('yCoord').value;
+    if (xInput && yInput) {
+        const x = parseFloat(xInput);
+        const y = parseFloat(yInput);
+        points.push(pixelToNDC(x, y));
+        drawThickLines();
+    }
 }
 
-// Handle line width change
+function addRandomSegment() {
+    const newX = Math.random() * canvas.width;
+    const newY = Math.random() * canvas.height;
+    points.push(pixelToNDC(newX, newY));
+    drawThickLines();
+}
+
 document.getElementById('lineWidth').addEventListener('input', (event) => {
-    lineWidth = event.target.value;
-    drawLine();
+    lineWidth = parseInt(event.target.value);
+    drawThickLines();
 });
 
-// Handle click to add points
 canvas.addEventListener('click', (event) => {
     const rect = canvas.getBoundingClientRect();
-    const x = (event.clientX - rect.left) / canvas.width * 2 - 1;
-    const y = (rect.bottom - event.clientY) / canvas.height * 2 - 1;
-    points.push(x, y);
-    drawLine();
+    const [x, y] = pixelToNDC(event.clientX - rect.left, event.clientY - rect.top);
+    points.push([x, y]);
+    drawThickLines();
 });
 
-// Initialize with one random point
-addRandomPoint();
+gl.clearColor(1, 1, 1, 1);
+gl.clear(gl.COLOR_BUFFER_BIT);
