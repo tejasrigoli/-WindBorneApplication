@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebGL Line Renderer</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="controls">
+        <label for="lineWidth">Line Width:</label>
+        <input type="range" id="lineWidth" min="1" max="10" value="2">
+        <button onclick="addRandomPoint()">Add Random Point</button>
+    </div>
+    <canvas id="glCanvas"></canvas>
+
+    <script src="script.js"></script>
+</body>
+</html>
