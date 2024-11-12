@@ -2,7 +2,7 @@
 
 An interactive WebGL-based application that allows users to draw lines dynamically on a canvas using multiple input methods. This project showcases WebGL rendering capabilities, allowing users to adjust line thickness and add segments in various ways.
 
-![Screenshot](https://github.com/tejasrigoli/WindBorneApplication/Screenshot.png)
+![Screenshot](https://github.com/tejasrigoli/WindBorneApplication/blob/main/Screenshot.png)
 
 ## Features
 
